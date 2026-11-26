@@ -1,0 +1,15 @@
+// Fictional edtech module of the demo app.
+model Student {
+  id            Int      @id @default(autoincrement())
+  firstName     String
+  dateOfBirth   DateTime
+  guardianPhone String
+  school        String
+  @@map("students")
+}
+
+model Course {
+  id    Int    @id
+  name  String
+  price Int
+}

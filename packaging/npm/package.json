@@ -1,0 +1,45 @@
+{
+  "name": "dpdpward",
+  "version": "0.0.0",
+  "description": "Map personal data in code for India's DPDP Act: data map, ROPA, Rule 6 safeguards evidence and breach clocks (installs the signed dpdpward binary)",
+  "keywords": [
+    "dpdp",
+    "dpdpa",
+    "privacy",
+    "data-protection",
+    "india",
+    "personal-data",
+    "ropa",
+    "compliance",
+    "sarif"
+  ],
+  "homepage": "https://github.com/Breaktroughf1/dpdpward",
+  "bugs": "https://github.com/Breaktroughf1/dpdpward/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Breaktroughf1/dpdpward.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Breaktrough (https://breaktroughf1.com)",
+  "bin": {
+    "dpdpward": "bin/dpdpward.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

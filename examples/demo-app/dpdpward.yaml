@@ -1,0 +1,29 @@
+version: 1
+
+organisation:
+  name: Example Lending Pvt Ltd (fictional)
+  grievance_contact: grievance@example.invalid
+  cert_in_contact: ""
+
+purposes:
+  - id: lending
+    description: Assess, disburse and service personal loans
+    basis: consent
+    data_principals: [customers]
+    stores: [customers, loans]
+    retention: "8 years after loan closure"
+    processors: ["AWS ap-south-1 (hosting)", "Example Credit Bureau"]
+  - id: kyc
+    description: Verify customer identity before lending
+    basis: legitimate-use
+    legitimate_use: ""
+    data_principals: [customers]
+    stores: [kyc_documents]
+    retention: ""
+
+children:
+  verifiable_consent: false
+
+safeguards:
+  processor_contracts: { evidence: [docs/security/processor-agreements.md] }
+  organisational: { evidence: [docs/security/isms-policy.md] }

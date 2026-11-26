@@ -1,0 +1,73 @@
+name: dpdpward
+description: Map personal data in code for India's DPDP Act and gate pull requests on new, unmapped personal data.
+author: Noeal Rajeev
+branding:
+  icon: shield
+  color: orange
+inputs:
+  dir:
+    description: Directory to scan
+    default: "."
+  config:
+    description: Path to dpdpward.yaml (default <dir>/dpdpward.yaml)
+    default: ""
+  exclude:
+    description: Extra glob to exclude (for example "test/**"); in addition to dpdpward.yaml's exclude list
+    default: ""
+  baseline:
+    description: Approved baseline; with it, only new findings and new personal data fields fail the job
+    default: ""
+  fail-on:
+    description: Fail on findings at or above this severity (info, low, medium, high, critical, none)
+    default: high
+  upload-sarif:
+    description: Upload results to GitHub code scanning (needs security-events write)
+    default: "true"
+outputs:
+  sarif:
+    description: Path to the SARIF file
+    value: ${{ steps.scan.outputs.sarif }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
+    - name: Build dpdpward from the pinned action source
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: go build -trimpath -o "$RUNNER_TEMP/dpdpward" ./cmd/dpdpward
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        IN_DIR: ${{ inputs.dir }}
+        IN_CONFIG: ${{ inputs.config }}
+        IN_EXCLUDE: ${{ inputs.exclude }}
+        IN_BASELINE: ${{ inputs.baseline }}
+        IN_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        set -euo pipefail
+        args=(scan --dir "$IN_DIR" --format sarif -o "$RUNNER_TEMP/dpdpward.sarif" --fail-on "$IN_FAIL_ON")
+        if [ -n "$IN_CONFIG" ]; then args+=(--config "$IN_CONFIG"); fi
+        if [ -n "$IN_EXCLUDE" ]; then args+=(--exclude "$IN_EXCLUDE"); fi
+        if [ -n "$IN_BASELINE" ]; then args+=(--baseline "$IN_BASELINE"); fi
+        echo "sarif=$RUNNER_TEMP/dpdpward.sarif" >> "$GITHUB_OUTPUT"
+        code=0
+        "$RUNNER_TEMP/dpdpward" "${args[@]}" || code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        "$RUNNER_TEMP/dpdpward" scan --dir "$IN_DIR" ${IN_CONFIG:+--config "$IN_CONFIG"} ${IN_EXCLUDE:+--exclude "$IN_EXCLUDE"} >> "$GITHUB_STEP_SUMMARY" || true
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+        category: dpdpward
+    - name: Enforce threshold
+      shell: bash
+      env:
+        CODE: ${{ steps.scan.outputs.exit-code }}
+      run: |
+        if [ "$CODE" = "1" ]; then echo "::error::dpdpward found findings at or above the threshold, or new personal data since the baseline"; exit 1; fi
+        if [ "$CODE" != "0" ]; then echo "::error::dpdpward failed (exit $CODE)"; exit 2; fi

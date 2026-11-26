@@ -1,0 +1,88 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test -race -coverpkg=./... -coverprofile=cover.out ./...
+      - name: Coverage gate (80%)
+        run: |
+          total=$(go tool cover -func=cover.out | awk '/^total:/ {gsub("%","",$3); print $3}')
+          echo "coverage ${total}%"
+          awk -v t="$total" 'BEGIN { exit (t < 80) }'
+      - name: Fuzz (short)
+        run: |
+          go test -run '^$' -fuzz=FuzzParsers -fuzztime=30s ./internal/extract/
+          go test -run '^$' -fuzz=FuzzParseFile -fuzztime=30s ./internal/iac/
+      - name: Demo app
+        run: |
+          go run ./cmd/dpdpward scan --dir examples/demo-app >> "$GITHUB_STEP_SUMMARY"
+          go run ./cmd/dpdpward ropa --dir examples/demo-app >> "$GITHUB_STEP_SUMMARY"
+
+  packaging:
+    # Builds the release archives without signing or publishing, and tests
+    # the npm and PyPI launchers against them (checksum refusal included).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: v2.20.3
+          args: release --snapshot --clean --skip=sign
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Launcher tests
+        env:
+          DPDPWARD_DIST: ${{ github.workspace }}/dist
+        run: |
+          node --test packaging/npm/test/install.test.js
+          python -B -m unittest discover -s packaging/pypi/tests -v
+      - name: Packages build
+        run: cd packaging/npm && npm pack --dry-run
+
+  self-scan:
+    # dpdpward scans its own repository: no personal data, no identifier
+    # values. Fixtures live in examples/ and are excluded via the action.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./
+        with:
+          exclude: "examples/**"
+          fail-on: high
+          upload-sarif: ${{ github.event_name == 'push' && !github.event.repository.private && 'true' || 'false' }}
