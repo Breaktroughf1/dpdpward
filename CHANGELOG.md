@@ -11,4 +11,6 @@ First release.
 - **Breach clock:** CERT-In 6-hour and DPDP Rules 2025 Rule 7 deadlines, with contacts and the personal data in scope.
 - Consent evidence (DP016, s.6(10)) and Significant Data Fiduciary duties (DP017, s.10).
 - 17 rules; Markdown, JSON, SARIF and CSV output; stable fingerprints; `baseline` / `scan --baseline` to fail CI on new personal data.
+- `demo` command (built-in fictional app) and a self-contained HTML report (data map, safeguards, ROPA, findings) for auditors and leadership.
+- CI recipes for GitLab, Bitbucket, Jenkins and Azure DevOps.
 - Composite GitHub Action; CI with race tests, an 80% coverage gate, fuzzing, a self-scan and launcher tests; signed reproducible releases with npm, PyPI, GHCR and Homebrew distribution.

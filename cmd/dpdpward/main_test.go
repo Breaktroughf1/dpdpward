@@ -179,3 +179,17 @@ func TestIdentifierValues(t *testing.T) {
 		t.Error("--no-values must skip value scanning")
 	}
 }
+
+func TestDemoAndHTML(t *testing.T) {
+	code, out := dw(t, "demo")
+	if code != 0 || !strings.Contains(out, "Record of Processing Activities") || !strings.Contains(out, "DP003") {
+		t.Fatalf("demo: %d", code)
+	}
+	code, html := dw(t, "demo", "--format", "html")
+	if code != 0 || !strings.HasPrefix(html, "<!doctype html>") || !strings.Contains(html, "Rule 6 security safeguards") || strings.Contains(html, "<script") {
+		t.Fatalf("demo html: %d", code)
+	}
+	if code, out := dw(t, "scan", "--dir", demo, "--format", "html"); code != 0 || !strings.Contains(out, "Record of Processing Activities") {
+		t.Errorf("scan html: %d", code)
+	}
+}

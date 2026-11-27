@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	demoapp "github.com/Breaktroughf1/dpdpward/examples/demo-app"
 	"github.com/Breaktroughf1/dpdpward/internal/analysis"
 	"github.com/Breaktroughf1/dpdpward/internal/classify"
 	"github.com/Breaktroughf1/dpdpward/internal/config"
@@ -42,12 +43,13 @@ func init() {
 const usage = `dpdpward — map personal data in code for India's DPDP Act
 
 Usage:
-  dpdpward scan      [--dir .] [--config dpdpward.yaml] [--format md|json|sarif|csv] [--fail-on SEV] [--baseline FILE]
+  dpdpward scan      [--dir .] [--config dpdpward.yaml] [--format md|html|json|sarif|csv] [--fail-on SEV] [--baseline FILE]
   dpdpward init      [--dir .]                       write a starter dpdpward.yaml from the scan
   dpdpward ropa      [--dir .] [--format md|csv|json] Record of Processing Activities
   dpdpward evidence  [--dir .] [-o evidence.json] [--check]   Rule 6 safeguards evidence
   dpdpward breach    --aware "2027-06-01T10:30:00+05:30" [--dir .]   notification deadlines
   dpdpward baseline  [--dir .] [-o dpdpward-baseline.json]
+  dpdpward demo      [--format md|html] [-o FILE]   run on a built-in fictional app (no clone needed)
   dpdpward rules | version
 
 dpdpward reads source files only: no database connections, no network.
@@ -108,6 +110,8 @@ func run(args []string, stdout, stderr io.Writer) (int, error) {
 	case "version":
 		fmt.Fprintln(stdout, "dpdpward", version)
 		return 0, nil
+	case "demo":
+		return runDemo(args[1:], stdout, stderr)
 	case "rules":
 		for _, r := range report.Rules {
 			fmt.Fprintf(stdout, "%s  %-42s %s\n", r.ID, r.Name, r.Short)
@@ -245,6 +249,12 @@ func scanOut(f *flags, res analysis.Result, stdout io.Writer) (int, error) {
 			return report.SARIF(w, res, version)
 		case "csv":
 			return report.DataMapCSV(w, res)
+		case "html":
+			title := "dpdpward report"
+			if res.Organisation != "" {
+				title += ": " + res.Organisation
+			}
+			return report.HTML(w, res, title, version, time.Now())
 		default:
 			return fmt.Errorf("unknown format %q", f.fmt_)
 		}
@@ -529,4 +539,37 @@ func write(path string, stdout io.Writer, f func(io.Writer) error) error {
 		return err
 	}
 	return os.WriteFile(path, buf.Bytes(), 0o644)
+}
+
+// runDemo scans the embedded fictional application.
+func runDemo(args []string, stdout, stderr io.Writer) (int, error) {
+	f := newFlags("demo")
+	f.fs.SetOutput(stderr)
+	if err := f.fs.Parse(args); err != nil {
+		return 2, err
+	}
+	dir, err := os.MkdirTemp("", "dpdpward-demo-")
+	if err != nil {
+		return 2, err
+	}
+	defer os.RemoveAll(dir)
+	if err := demoapp.WriteTo(dir); err != nil {
+		return 2, err
+	}
+	f.dir = dir
+	res, err := scan(f)
+	if err != nil {
+		return 2, err
+	}
+	const title = "dpdpward demo: Example Lending (fictional)"
+	return 0, write(f.out, stdout, func(w io.Writer) error {
+		if f.fmt_ == "html" {
+			return report.HTML(w, res, title, version, time.Now())
+		}
+		fmt.Fprint(w, "> Fictional demo app built into dpdpward. Run `dpdpward init` and `dpdpward scan` in your own repository.\n\n")
+		report.Markdown(w, res)
+		fmt.Fprintln(w)
+		report.ROPAMarkdown(w, res, time.Now())
+		return nil
+	})
 }

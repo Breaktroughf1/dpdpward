@@ -48,13 +48,18 @@ dpdpward evidence -o dpdp-evidence.json --check   # exit 1 until every safeguard
 dpdpward breach --aware now                        # notification deadlines, if it ever comes to that
 ```
 
-Try it on the fictional demo app: `make demo`.
+See it work on a built-in fictional app first, with no clone and no setup:
+
+```bash
+npx dpdpward demo                         # or: dpdpward demo --format html -o dpdpward-demo.html
+```
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `scan` | Data map, identifier values in files, Rule 6 safeguards, 17 rules; `md`, `json`, `sarif`, `csv` |
+| `scan` | Data map, identifier values in files, Rule 6 safeguards, 17 rules; `md`, `html` (self-contained, printable for auditors), `json`, `sarif`, `csv` |
+| `demo` | The whole flow on a built-in fictional app (`--format html` for the report) |
 | `init` | Starter `dpdpward.yaml` with every store that holds personal data |
 | `ropa` | Record of Processing Activities (`md`, `csv`, `json`) |
 | `evidence` | Machine-checkable Rule 6 evidence record; `--check` exits 1 unless every safeguard is attested |
@@ -97,6 +102,7 @@ steps:
 - [Configuration (`dpdpward.yaml`)](docs/config.md)
 - [Rules](docs/rules.md)
 - [Evidence record](docs/evidence.md)
+- [CI recipes: GitLab, Bitbucket, Jenkins, Azure DevOps](docs/ci.md)
 
 ## Licence
 
