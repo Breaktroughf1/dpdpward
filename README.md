@@ -1,6 +1,7 @@
 # dpdpward
 
 [![ci](https://github.com/Breaktroughf1/dpdpward/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Breaktroughf1/dpdpward/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Breaktroughf1/dpdpward/badge)](https://scorecard.dev/viewer/?uri=github.com/Breaktroughf1/dpdpward)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Map personal data in your code for India's DPDP Act, and keep the map true in CI.**
@@ -98,6 +99,7 @@ steps:
 
 ## Documentation
 
+- [FAQ](docs/faq.md)
 - [Legal basis and its limits](docs/legal-basis.md)
 - [Configuration (`dpdpward.yaml`)](docs/config.md)
 - [Rules](docs/rules.md)
