@@ -173,8 +173,102 @@ func TestWalk(t *testing.T) {
 func FuzzParsers(f *testing.F) {
 	f.Add([]byte("CREATE TABLE x (a int,\n b text);\nmodel M {\n a String\n}\n"))
 	f.Fuzz(func(t *testing.T, b []byte) {
-		for _, p := range []parser{SQL, Prisma, Python, JS, Rails, JPA, Go} {
+		for _, p := range []parser{SQL, Prisma, Python, JS, Rails, JPA, Go, Laravel, EFCore} {
 			_ = p(b)
 		}
 	})
+}
+
+func TestLaravel(t *testing.T) {
+	src := `<?php
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('borrowers', function (Blueprint $table) {
+            $table->id();
+            $table->string('full_name');
+            $table->string('pan_number', 10)->nullable();
+            $table->date('date_of_birth');
+            $table->index('pan_number');
+            $table->timestamps();
+        });
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('aadhaar_ref')->nullable();
+        });
+    }
+};
+`
+	got := Laravel([]byte(src))
+	one(t, got, "borrowers", "full_name,pan_number,date_of_birth")
+	one(t, got, "users", "aadhaar_ref")
+}
+
+func TestSequelizeAndDrizzle(t *testing.T) {
+	src := `const Patient = sequelize.define('Patient', {
+  name: { type: DataTypes.STRING },
+  abhaNumber: DataTypes.STRING,
+});
+
+class Lead extends Model {}
+Lead.init({
+  phone: DataTypes.STRING,
+  email: { type: DataTypes.STRING, allowNull: false },
+}, { sequelize, tableName: 'leads' });
+
+module.exports = {
+  up: async (queryInterface) => {
+    await queryInterface.createTable('kyc', {
+      pan: { type: Sequelize.STRING },
+    });
+  },
+};
+
+export const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  mobile: varchar('mobile_number', { length: 15 }),
+  upi: text('upi_id'),
+});
+`
+	got := JS([]byte(src))
+	one(t, got, "Patient", "name,abhaNumber")
+	one(t, got, "leads", "phone,email")
+	one(t, got, "kyc", "pan")
+	one(t, got, "customers", "id,mobile_number,upi_id")
+}
+
+func TestEFCore(t *testing.T) {
+	src := `using Microsoft.EntityFrameworkCore;
+
+[Table("customers")]
+public class Customer
+{
+    public int Id { get; set; }
+    public required string Email { get; set; }
+    public string? PanNumber { get; set; }
+}
+
+public class Order
+{
+    public int Id { get; set; }
+    public decimal Amount { get; set; }
+}
+
+public class AppDbContext : DbContext
+{
+    public DbSet<Customer> Customers { get; set; }
+    public DbSet<Order> Orders { get; set; }
+}
+`
+	got := efcore([]byte(src), "src/Data/AppDbContext.cs")
+	one(t, got, "customers", "Id,Email,PanNumber")
+	one(t, got, "Order", "Id,Amount")
+	for _, s := range got {
+		if s.Name == "AppDbContext" {
+			t.Error("the DbContext itself is not an entity")
+		}
+	}
+	plain := efcore([]byte("public class Helper\n{\n    public string Name { get; set; }\n}\n"), "src/Util/Helper.cs")
+	if len(plain) != 0 {
+		t.Errorf("a plain class outside entity folders must be ignored: %+v", plain)
+	}
 }

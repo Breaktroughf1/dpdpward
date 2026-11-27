@@ -454,6 +454,8 @@ organisation:
   grievance_contact: ""    # who answers Data Principals' requests and grievances
   dpo: ""                  # Data Protection Officer (Significant Data Fiduciaries)
   cert_in_contact: ""      # point of contact for CERT-In incident reports
+  consent_records: ""      # where consent records live: a store name, or an external system
+  significant_data_fiduciary: false
 
 exclude:                   # paths not to scan, e.g. test fixtures with synthetic data
   # - "test/**"

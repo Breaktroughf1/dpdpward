@@ -35,6 +35,8 @@ var Rules = []Rule{
 	{"DP012", "stale-purpose-record", "Purpose lists stores not found in code", "Update the purpose's stores list."},
 	{"DP013", "ignore-without-reason", "Ignore entry without a reason", "Record why the field is not personal data."},
 	{"DP014", "cross-border-transfer", "Transfer outside India declared", "Check each country against any restriction notified under section 16."},
+	{"DP016", "consent-not-evidenced", "Consent relied on, but no consent records", "Keep consent records (who, notice, purpose, time, withdrawal) and name the store or system under organisation.consent_records (s.6(10))."},
+	{"DP017", "significant-data-fiduciary-duties", "Significant Data Fiduciary duty not evidenced", "Appoint a DPO in India and evidence the periodic DPIA and independent audit (s.10)."},
 	{"DP015", "contact-missing", "Grievance or CERT-In contact not recorded", "Record contacts under organisation: in dpdpward.yaml."},
 }
 

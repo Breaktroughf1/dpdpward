@@ -80,9 +80,10 @@ var rules = []rule{
 	{category: "identity.gender", label: "Gender", sens: model.SensMedium, conf: "medium", any: []string{"gender", "sex"}},
 	{category: "identity.dob", label: "Date of birth / age", sens: model.SensMedium, conf: "high", children: true, any: []string{"dob", "birthday", "birthdate", "age"}, joined: []string{"dateofbirth", "birthdate"}},
 	{category: "children.guardian", label: "Parent / guardian details", sens: model.SensMedium, conf: "medium", children: true, any: []string{"guardian", "minor"}, joined: []string{"parentconsent", "parentname", "parentphone", "parentemail", "isminor", "ischild"}},
+	{category: "identity.username", label: "Username / handle", sens: model.SensMedium, conf: "high", joined: []string{"username", "userhandle", "screenname", "loginid", "loginname"}},
 	{category: "contact.email", label: "Email address", sens: model.SensMedium, conf: "high", any: []string{"email", "mail"}},
 	{category: "contact.phone", label: "Phone number", sens: model.SensMedium, conf: "high", any: []string{"phone", "mobile", "msisdn", "whatsapp", "telephone"}, joined: []string{"contactnumber", "contactno", "phoneno"}},
-	{category: "identity.name", label: "Person's name", sens: model.SensMedium, conf: "high", joined: []string{"firstname", "lastname", "fullname", "middlename", "surname", "givenname", "familyname", "fathername", "mothername", "spousename", "nominee"}},
+	{category: "identity.name", label: "Person's name", sens: model.SensMedium, conf: "high", joined: []string{"firstname", "lastname", "fullname", "middlename", "surname", "givenname", "familyname", "fathername", "mothername", "spousename", "nominee", "displayname", "nickname"}},
 	{category: "identity.name", label: "Person's name", sens: model.SensMedium, conf: "medium", any: []string{"name"}, personOnly: true},
 	{category: "online.identifier", label: "Device or network identifier", sens: model.SensLow, conf: "medium", any: []string{"imei", "ip"}, joined: []string{"ipaddress", "deviceid", "advertisingid", "gaid", "idfa", "useragent", "cookieid", "macaddress"}},
 	{category: "location.address", label: "Postal address", sens: model.SensMedium, conf: "high", any: []string{"address", "street", "pincode", "postcode", "zipcode", "landmark", "locality"}, joined: []string{"pincode", "postalcode", "addressline"}},
@@ -100,7 +101,10 @@ var personStore = regexp.MustCompile(`(?i)(user|customer|client|member|patient|s
 // metadata about the data, e.g. email_verified, phone_verified_at.
 var lastTokenNotValue = map[string]bool{"verified": true, "at": true, "count": true, "flag": true, "enabled": true,
 	"status": true, "type": true, "template": true, "format": true, "regex": true, "label": true, "sent": true,
-	"attempts": true, "valid": true, "verification": true, "visible": true, "public": true, "required": true}
+	"attempts": true, "valid": true, "verification": true, "visible": true, "public": true, "required": true,
+	// equipment and systems, not people: phone_model, mail_server, sms_provider
+	"model": true, "brand": true, "server": true, "host": true, "provider": true, "domain": true, "version": true,
+	"os": true, "gateway": true, "port": true, "policy": true}
 
 // boolTypes are column types that cannot hold the personal data itself.
 var boolTypes = map[string]bool{"bool": true, "boolean": true, "booleanfield": true, "bit": true, "tinyint(1)": true}

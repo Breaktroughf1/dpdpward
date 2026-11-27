@@ -10,6 +10,8 @@ organisation:
   grievance_contact: grievance@example.in   # DP015 when empty
   dpo: dpo@example.in                       # Significant Data Fiduciaries
   cert_in_contact: security@example.in      # DP015 when empty
+  consent_records: user_consents            # store name/glob, or an external system (DP016)
+  significant_data_fiduciary: false         # if notified under s.10 (DP017)
 
 exclude: ["test/fixtures/**"]               # paths not scanned (synthetic test data)
 
@@ -37,6 +39,10 @@ safeguards:                                 # Rule 6(1); evidence = repo paths o
   log_retention: { evidence: [] }
   processor_contracts: { evidence: [docs/dpa/] }
   organisational: { evidence: ["https://intranet.example.in/isms"], notes: "ISO 27001 certified" }
+
+sdf:                                        # only for Significant Data Fiduciaries (s.10)
+  dpia: { evidence: [docs/dpia-2027.pdf] }
+  audit: { evidence: ["https://auditor.example.in/report-2027"] }
 
 ignore:
   - { store: audit_log, field: actor_email, reason: "staff work e-mail, covered by the HR purpose" }

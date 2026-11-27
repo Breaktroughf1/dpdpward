@@ -146,3 +146,26 @@ func TestFingerprintsStable(t *testing.T) {
 		}
 	}
 }
+
+func TestConsentAndSDF(t *testing.T) {
+	cfg := &config.Config{Purposes: []config.Purpose{{ID: "marketing", Basis: "consent", Retention: "1y", Stores: []string{"users", "orders"}}}}
+	cfg.Organisation.SignificantDataFiduciary = true
+	cfg.SDF.Audit = config.Attn{Evidence: []string{"https://auditor.example/report"}}
+	got := rules(Analyze(input(t, cfg, nil)))
+	if got["DP016"] != 1 {
+		t.Errorf("consent basis with no consent store must raise DP016: %v", got)
+	}
+	if got["DP017"] != 2 {
+		t.Errorf("SDF without DPO and DPIA evidence must raise two DP017 (audit is evidenced): %v", got)
+	}
+	in := input(t, cfg, nil)
+	in.Stores = append(in.Stores, model.Store{Name: "user_consents", Kind: "sql-table"})
+	if rules(Analyze(in))["DP016"] != 0 {
+		t.Error("a consent store in the code clears DP016")
+	}
+	cfg2 := *cfg
+	cfg2.Organisation.ConsentRecords = "Registered Consent Manager (example)"
+	if rules(Analyze(input(t, &cfg2, nil)))["DP016"] != 0 {
+		t.Error("a declared external consent system clears DP016")
+	}
+}

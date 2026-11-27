@@ -5,6 +5,8 @@ dpdpward is a technical aid, **not legal advice**. This page lists the provision
 | Topic | Source | What dpdpward does |
 |---|---|---|
 | Lawful processing: consent or legitimate use | DPDP Act ss.4, 6, 7 | Requires a `basis` per purpose (DP006), and the s.7 clause when relying on legitimate use |
+| Burden of proving consent | DPDP Act s.6(10) | Requires a consent record store or system when a purpose relies on consent (DP016) |
+| Significant Data Fiduciary duties: DPO in India, independent audit, DPIA | DPDP Act s.10 | Checks the DPO and evidence when `significant_data_fiduciary: true` (DP017) |
 | Erasure when the purpose is served | DPDP Act s.8(7) | Requires a `retention` per purpose (DP005) |
 | Children's data: verifiable parental consent | DPDP Act s.9; Rules 2025 r.10 | Flags dates of birth and guardian fields without a recorded mechanism (DP004) |
 | Reasonable security safeguards | DPDP Rules 2025 r.6(1)(a)–(g) | Rule 6 evidence model (DP008, DP009, DP010) |

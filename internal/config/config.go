@@ -24,6 +24,13 @@ type Config struct {
 	Children     Children        `yaml:"children"`
 	Safeguards   map[string]Attn `yaml:"safeguards"`
 	Ignore       []Ignore        `yaml:"ignore"`
+	SDF          SDF             `yaml:"sdf"`
+}
+
+// SDF holds the extra evidence a Significant Data Fiduciary needs (s.10).
+type SDF struct {
+	DPIA  Attn `yaml:"dpia"`  // periodic Data Protection Impact Assessment
+	Audit Attn `yaml:"audit"` // periodic audit by an independent data auditor
 }
 
 // Organisation identifies the Data Fiduciary and its contacts.
@@ -32,6 +39,11 @@ type Organisation struct {
 	GrievanceContact string `yaml:"grievance_contact"` // person who answers Data Principals' questions
 	DPO              string `yaml:"dpo"`               // Significant Data Fiduciaries only
 	CertInContact    string `yaml:"cert_in_contact"`   // point of contact for CERT-In
+	// ConsentRecords names where consent records are kept: a store name or
+	// glob in this codebase, or an external system (e.g. a Consent Manager).
+	ConsentRecords string `yaml:"consent_records"`
+	// SignificantDataFiduciary is true when notified as an SDF (s.10).
+	SignificantDataFiduciary bool `yaml:"significant_data_fiduciary"`
 }
 
 // Purpose is one processing purpose, the unit of the ROPA.

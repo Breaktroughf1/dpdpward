@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -139,6 +140,8 @@ func Analyze(in Input) Result {
 	a.values()
 	a.safeguards()
 	a.contacts()
+	a.consentRecords()
+	a.significant()
 	sort.SliceStable(a.res.Findings, func(i, j int) bool {
 		fi, fj := a.res.Findings[i], a.res.Findings[j]
 		if fi.Severity != fj.Severity {
@@ -412,6 +415,76 @@ func (a *analyzer) contacts() {
 		a.add("DP015", Low, config.FileName, 0, "contact|cert-in",
 			"No CERT-In point of contact is recorded. Cyber incidents must be reported to CERT-In within 6 hours of being noticed.")
 	}
+}
+
+var consentStore = regexp.MustCompile(`(?i)consent`)
+
+// consentRecords reports (DP016) consent-based purposes with nothing that
+// could prove consent: the Data Fiduciary bears that burden (s.6(10)).
+func (a *analyzer) consentRecords() {
+	cfg := a.in.Config
+	if cfg == nil {
+		return
+	}
+	var consentPurposes []string
+	for _, p := range cfg.Purposes {
+		if p.Basis == "consent" {
+			consentPurposes = append(consentPurposes, p.ID)
+		}
+	}
+	if len(consentPurposes) == 0 {
+		return
+	}
+	declared := strings.TrimSpace(cfg.Organisation.ConsentRecords)
+	for _, s := range a.in.Stores {
+		if consentStore.MatchString(s.Name) {
+			return
+		}
+		if declared != "" {
+			if ok, _ := filepath.Match(strings.ToLower(declared), strings.ToLower(s.Name)); ok {
+				return
+			}
+		}
+	}
+	if declared != "" && !strings.ContainsAny(declared, "*?[") {
+		return // an external system, e.g. a registered Consent Manager
+	}
+	a.add("DP016", Medium, config.FileName, 0, "consent-records",
+		fmt.Sprintf("Purposes %s rely on consent, but no consent record store was found in the code and none is declared. Section 6(10) puts the burden of proving consent on the Data Fiduciary: keep who consented, to which notice and purpose, when, and any withdrawal, and record where under organisation.consent_records.", strings.Join(consentPurposes, ", ")))
+}
+
+// significant reports (DP017) missing Significant Data Fiduciary duties.
+func (a *analyzer) significant() {
+	cfg := a.in.Config
+	if cfg == nil || !cfg.Organisation.SignificantDataFiduciary {
+		return
+	}
+	if strings.TrimSpace(cfg.Organisation.DPO) == "" {
+		a.add("DP017", High, config.FileName, 0, "sdf|dpo",
+			"A Significant Data Fiduciary must appoint a Data Protection Officer based in India (s.10(2)(a)); organisation.dpo is empty.")
+	}
+	for _, it := range []struct {
+		key  string
+		attn config.Attn
+		what string
+	}{{"dpia", cfg.SDF.DPIA, "a periodic Data Protection Impact Assessment (s.10(2)(c))"}, {"audit", cfg.SDF.Audit, "a periodic audit by an independent data auditor (s.10(2)(b))"}} {
+		if !a.evidenceExists(it.attn.Evidence) {
+			a.add("DP017", Medium, config.FileName, 0, "sdf|"+it.key,
+				fmt.Sprintf("A Significant Data Fiduciary must carry out %s; add evidence under sdf.%s in dpdpward.yaml.", it.what, it.key))
+		}
+	}
+}
+
+func (a *analyzer) evidenceExists(evs []string) bool {
+	for _, ev := range evs {
+		if strings.HasPrefix(ev, "https://") {
+			return true
+		}
+		if _, err := os.Stat(filepath.Join(a.in.Root, ev)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func labels(els []model.Element) string {

@@ -67,6 +67,13 @@ func TestField(t *testing.T) {
 		{users, "created_at", "", ""},
 		{users, "gstin", "", "business-id.gstin"},
 		{users, "marketing_opt_in", "", ""},
+		{users, "phone_model", "", ""},
+		{users, "mail_server", "", ""},
+		{users, "sms_provider", "", ""},
+		{users, "username", "", "identity.username"},
+		{users, "userName", "", "identity.username"},
+		{users, "display_name", "", "identity.name"},
+		{users, "pin_code", "", "location.address"},
 	}
 	for _, c := range cases {
 		e := Field(c.store, model.Field{Name: c.field, Type: c.typ})

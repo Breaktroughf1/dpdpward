@@ -109,6 +109,10 @@ func parserFor(rel string) parser {
 		return Python
 	case ext == ".ts" || ext == ".js" || ext == ".mjs" || ext == ".cjs":
 		return JS
+	case ext == ".php":
+		return Laravel
+	case ext == ".cs":
+		return func(b []byte) []model.Store { return efcore(b, rel) }
 	case ext == ".java" || ext == ".kt":
 		return JPA
 	case ext == ".go":
@@ -340,10 +344,11 @@ var (
 	constNameRe     = regexp.MustCompile(`(?:const|let|var)\s+(\w+)\s*=`)
 )
 
-// JS parses TypeORM entities and Mongoose schemas.
+// JS parses TypeORM entities, Mongoose schemas, Sequelize models and
+// migrations, and Drizzle tables.
 func JS(data []byte) []model.Store {
 	ls := lines(data)
-	var out []model.Store
+	out := append(sequelize(ls), drizzle(ls)...)
 	for i := 0; i < len(ls); i++ {
 		if m := typeormEntityRe.FindStringSubmatch(ls[i]); m != nil {
 			name := m[1] + m[2]
@@ -575,6 +580,196 @@ func Go(data []byte) []model.Store {
 			st.Fields = append(st.Fields, model.Field{Name: name, Type: fm[2], Line: j + 1})
 		}
 		if tagged && len(st.Fields) > 0 {
+			out = append(out, st)
+		}
+	}
+	return out
+}
+
+// ------------------------------------------------- Sequelize and Drizzle
+
+var (
+	seqDefineRe  = regexp.MustCompile(`\.define\(\s*["'](\w+)["']\s*,\s*\{`)
+	seqInitRe    = regexp.MustCompile(`^\s*(\w+)\.init\(\s*\{`)
+	seqCreateRe  = regexp.MustCompile(`createTable\(\s*["'](\w+)["']\s*,\s*\{`)
+	seqTableName = regexp.MustCompile(`tableName\s*:\s*["'](\w+)["']`)
+	drizzleRe    = regexp.MustCompile(`(?:pgTable|mysqlTable|sqliteTable)\(\s*["'](\w+)["']\s*,\s*\{`)
+	drizzleColRe = regexp.MustCompile(`^\s*(\w+)\s*:\s*(\w+)\(\s*(?:["'](\w+)["'])?`)
+)
+
+// objectKeys collects depth-1 keys of the object literal opened on line i.
+func objectKeys(ls []string, i int, keyRe *regexp.Regexp) ([]model.Field, int) {
+	var fields []model.Field
+	depth := strings.Count(ls[i], "{") - strings.Count(ls[i], "}")
+	j := i + 1
+	for ; j < len(ls) && depth > 0; j++ {
+		if depth == 1 {
+			if m := keyRe.FindStringSubmatch(ls[j]); m != nil {
+				name := m[1]
+				if len(m) > 3 && m[3] != "" {
+					name = m[3] // drizzle: the column name argument
+				}
+				fields = append(fields, model.Field{Name: name, Type: m[2], Line: j + 1})
+			}
+		}
+		depth += strings.Count(ls[j], "{") - strings.Count(ls[j], "}")
+	}
+	return fields, j
+}
+
+func sequelize(ls []string) []model.Store {
+	var out []model.Store
+	for i := 0; i < len(ls); i++ {
+		name, kind := "", ""
+		if m := seqDefineRe.FindStringSubmatch(ls[i]); m != nil {
+			name, kind = m[1], "sequelize-model"
+		} else if m := seqCreateRe.FindStringSubmatch(ls[i]); m != nil {
+			name, kind = m[1], "sequelize-migration"
+		} else if m := seqInitRe.FindStringSubmatch(ls[i]); m != nil {
+			name, kind = m[1], "sequelize-model"
+		}
+		if kind == "" {
+			continue
+		}
+		isInit := seqInitRe.MatchString(ls[i])
+		fields, end := objectKeys(ls, i, jsKeyRe)
+		// Model.init({...}, { tableName: "x" }): the options object starts on
+		// the line that closes the attributes and ends at the first ")".
+		if isInit {
+			for k := end - 1; k >= 0 && k < len(ls) && k < end+5; k++ {
+				if tm := seqTableName.FindStringSubmatch(ls[k]); tm != nil {
+					name = tm[1]
+					break
+				}
+				if k >= end && strings.Contains(ls[k], ")") {
+					break
+				}
+			}
+		}
+		if len(fields) > 0 {
+			out = append(out, model.Store{Name: name, Kind: kind, Line: i + 1, Fields: fields})
+		}
+		i = end - 1
+	}
+	return out
+}
+
+func drizzle(ls []string) []model.Store {
+	var out []model.Store
+	for i := 0; i < len(ls); i++ {
+		m := drizzleRe.FindStringSubmatch(ls[i])
+		if m == nil {
+			continue
+		}
+		fields, end := objectKeys(ls, i, drizzleColRe)
+		if len(fields) > 0 {
+			out = append(out, model.Store{Name: m[1], Kind: "drizzle-table", Line: i + 1, Fields: fields})
+		}
+		i = end - 1
+	}
+	return out
+}
+
+// ------------------------------------------------------- Laravel (PHP)
+
+var (
+	laravelSchemaRe = regexp.MustCompile(`Schema::(create|table)\(\s*["'](\w+)["']`)
+	laravelColRe    = regexp.MustCompile(`\$table->(\w+)\(\s*["'](\w+)["']`)
+	laravelSkip     = map[string]bool{"index": true, "unique": true, "primary": true, "foreign": true, "dropColumn": true,
+		"dropIndex": true, "dropUnique": true, "dropForeign": true, "renameColumn": true, "spatialIndex": true, "fullText": true}
+)
+
+// Laravel parses Schema::create / Schema::table migrations.
+func Laravel(data []byte) []model.Store {
+	ls := lines(data)
+	var out []model.Store
+	for i := 0; i < len(ls); i++ {
+		m := laravelSchemaRe.FindStringSubmatch(ls[i])
+		if m == nil {
+			continue
+		}
+		st := model.Store{Name: m[2], Kind: "laravel-migration", Line: i + 1}
+		depth := 0
+		started := false
+		for j := i; j < len(ls); j++ {
+			for _, cm := range laravelColRe.FindAllStringSubmatch(ls[j], -1) {
+				if !laravelSkip[cm[1]] {
+					st.Fields = append(st.Fields, model.Field{Name: cm[2], Type: cm[1], Line: j + 1})
+				}
+			}
+			depth += strings.Count(ls[j], "{") - strings.Count(ls[j], "}")
+			if strings.Contains(ls[j], "{") {
+				started = true
+			}
+			if started && depth <= 0 {
+				i = j
+				break
+			}
+		}
+		if len(st.Fields) > 0 {
+			out = append(out, st)
+		}
+	}
+	return out
+}
+
+// ------------------------------------------------- EF Core / C# entities
+
+var (
+	csTableRe = regexp.MustCompile(`\[Table\(\s*"(\w+)"`)
+	csClassRe = regexp.MustCompile(`\bclass\s+(\w+)`)
+	csPropRe  = regexp.MustCompile(`^\s*public\s+(?:virtual\s+|required\s+)*([\w<>?,\[\] ]+?)\s+(\w+)\s*\{\s*get;`)
+	csDbSetRe = regexp.MustCompile(`DbSet<(\w+)>`)
+	csEntDir  = regexp.MustCompile(`(?i)(entities|entity|models|domain)`)
+)
+
+// EFCore parses C# entity classes: classes with [Table], classes named in
+// a DbSet<> in the same file, or any class in an Entities/Models/Domain
+// file whose properties are auto-properties.
+func EFCore(data []byte) []model.Store { return efcore(data, "") }
+
+func efcore(data []byte, rel string) []model.Store {
+	ls := lines(data)
+	sets := map[string]bool{}
+	for _, m := range csDbSetRe.FindAllStringSubmatch(string(data), -1) {
+		sets[m[1]] = true
+	}
+	var out []model.Store
+	table := ""
+	for i := 0; i < len(ls); i++ {
+		if tm := csTableRe.FindStringSubmatch(ls[i]); tm != nil {
+			table = tm[1]
+			continue
+		}
+		m := csClassRe.FindStringSubmatch(ls[i])
+		if m == nil {
+			continue
+		}
+		name := m[1]
+		entity := table != "" || sets[name] || csEntDir.MatchString(rel) || strings.Contains(string(data), "using Microsoft.EntityFrameworkCore") && !strings.HasSuffix(name, "Context")
+		st := model.Store{Name: name, Kind: "efcore-entity", Line: i + 1}
+		if table != "" {
+			st.Name = table
+		}
+		table = ""
+		depth := 0
+		started := false
+		for j := i; j < len(ls); j++ {
+			if started && depth == 1 {
+				if pm := csPropRe.FindStringSubmatch(ls[j]); pm != nil && !strings.Contains(pm[1], "DbSet<") {
+					st.Fields = append(st.Fields, model.Field{Name: pm[2], Type: strings.TrimSpace(pm[1]), Line: j + 1})
+				}
+			}
+			depth += strings.Count(ls[j], "{") - strings.Count(ls[j], "}")
+			if strings.Contains(ls[j], "{") {
+				started = true
+			}
+			if started && depth <= 0 {
+				i = j
+				break
+			}
+		}
+		if entity && len(st.Fields) > 0 {
 			out = append(out, st)
 		}
 	}

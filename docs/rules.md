@@ -18,6 +18,8 @@
 | <a id="dp012"></a>DP012 | low | stale-purpose-record | A purpose lists stores that are not found in the code. |
 | <a id="dp013"></a>DP013 | low | ignore-without-reason | An ignore entry without a reason (it is not applied). |
 | <a id="dp014"></a>DP014 | info | cross-border-transfer | A purpose declares transfers outside India. |
+| <a id="dp016"></a>DP016 | medium | consent-not-evidenced | A purpose relies on consent, but no consent record store is in the code and none is declared (s.6(10): the fiduciary must prove consent). |
+| <a id="dp017"></a>DP017 | high/medium | significant-data-fiduciary-duties | Declared Significant Data Fiduciary without a DPO (high), or without evidence of a periodic DPIA or independent audit (medium) (s.10). |
 | <a id="dp015"></a>DP015 | low | contact-missing | No grievance or CERT-In contact is recorded. |
 
 Each finding has a stable fingerprint (`partialFingerprints["dpdpward/v1"]`), used by baselines and code scanning.

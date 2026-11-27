@@ -7,7 +7,7 @@
 
 The DPDP Act, 2023 and the DPDP Rules, 2025 are fully in force from **13 May 2027**: notice, consent, erasure, Rule 6 security safeguards and Rule 7 breach intimation. The first question any of these raises is *where is the personal data, and why do we hold it?* dpdpward answers it from the code you already have:
 
-- **Data map:** finds personal data fields across SQL DDL, Prisma, Django, SQLAlchemy, TypeORM, Mongoose, Rails, JPA/Hibernate and Go structs. It has an Indian focus: Aadhaar, PAN, UPI, ABHA, GSTIN, IFSC, voter ID, plus children's-data indicators.
+- **Data map:** finds personal data fields across SQL DDL, Prisma, Django, SQLAlchemy, Laravel, Rails, TypeORM, Sequelize, Drizzle, Mongoose, JPA/Hibernate, EF Core (C#) and Go structs. It has an Indian focus: Aadhaar, PAN, UPI, ABHA, GSTIN, IFSC, voter ID, plus children's-data indicators.
 - **Record of Processing Activities (ROPA):** joins that map with the purposes, lawful basis, retention and processors you declare in `dpdpward.yaml`.
 - **Rule 6 safeguards evidence:** reads Terraform for encryption at rest, public exposure, audit logging, backups and one-year log retention, and combines it with your attested evidence into a machine-checkable record.
 - **Breach clocks:** prints the CERT-In 6-hour and Rule 7 72-hour deadlines from the moment you became aware, scoped to the data your code holds.
@@ -54,7 +54,7 @@ Try it on the fictional demo app: `make demo`.
 
 | Command | What it does |
 |---|---|
-| `scan` | Data map, identifier values in files, Rule 6 safeguards, 15 rules; `md`, `json`, `sarif`, `csv` |
+| `scan` | Data map, identifier values in files, Rule 6 safeguards, 17 rules; `md`, `json`, `sarif`, `csv` |
 | `init` | Starter `dpdpward.yaml` with every store that holds personal data |
 | `ropa` | Record of Processing Activities (`md`, `csv`, `json`) |
 | `evidence` | Machine-checkable Rule 6 evidence record; `--check` exits 1 unless every safeguard is attested |
