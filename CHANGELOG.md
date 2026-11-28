@@ -2,6 +2,8 @@
 
 ## v0.1.0 — 2026-11-27
 
+- Built with Go 1.27.4. Go 1.24.7, used before, has standard-library vulnerabilities (net/http, crypto/tls, crypto/x509, html/template) that govulncheck reports as reachable. CI now runs govulncheck on every change.
+
 First release.
 
 - **Data map:** personal data fields found in SQL DDL, Prisma, Django, SQLAlchemy/SQLModel, Laravel migrations, Rails, TypeORM, Sequelize, Drizzle, Mongoose, JPA/Hibernate (Java and Kotlin), EF Core (C#) and Go structs with persistence tags. Indian identifiers (Aadhaar, PAN, UPI, ABHA, GSTIN, IFSC, voter ID, driving licence), contact, financial, health, biometric and children's-data indicators.
