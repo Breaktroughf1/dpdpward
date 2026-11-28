@@ -79,7 +79,7 @@ permissions:
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     with: { persist-credentials: false }
-  - uses: Breaktroughf1/dpdpward@<full-commit-sha>   # pin to a release commit
+  - uses: Breaktroughf1/dpdpward@v0.1.0   # pin to the release commit SHA in production
     with:
       fail-on: high
       baseline: .github/dpdpward-baseline.json
