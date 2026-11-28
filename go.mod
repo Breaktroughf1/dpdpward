@@ -1,5 +1,7 @@
 module github.com/Breaktroughf1/dpdpward
 
-go 1.24.7
+go 1.27.0
 
-require gopkg.in/yaml.v3 v3.0.1 // indirect
+toolchain go1.27.4
+
+require gopkg.in/yaml.v3 v3.0.1
